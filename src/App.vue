@@ -33,6 +33,10 @@
           <el-icon><DataBoard /></el-icon>
           <template #title>点位统计</template>
         </el-menu-item>
+        <el-menu-item index="/parking">
+          <el-icon><Van /></el-icon>
+          <template #title>停车申请</template>
+        </el-menu-item>
         <el-menu-item index="/user">
           <el-icon><User /></el-icon>
           <template #title>账号管理</template>
@@ -96,7 +100,7 @@
 import { ref, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useUserStore } from '@/store/user'
-import { Monitor, Location, Document, User, Promotion, Avatar, SwitchButton, ArrowDown, Lock, Fold, Expand, DataBoard } from '@element-plus/icons-vue'
+import { Monitor, Location, Document, User, Promotion, Avatar, SwitchButton, ArrowDown, Lock, Fold, Expand, DataBoard, Van } from '@element-plus/icons-vue'
 import { ElMessageBox } from 'element-plus'
 
 const router = useRouter()
@@ -108,6 +112,7 @@ const collapsed = ref(false)
 const isFullScreen = computed(() => {
   return route.path === '/login'
     || route.path.startsWith('/check')
+    || route.path.startsWith('/apply')
     || route.path === '/workspace'
 })
 

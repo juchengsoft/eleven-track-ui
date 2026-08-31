@@ -22,6 +22,12 @@ const routes = [
     meta: { requiresAuth: true, screen: 'nfc', adminOnly: false }
   },
   {
+    path: '/apply/parking',
+    name: 'ParkingGuest ',
+    component: () => import('@/views/ParkingGuest/index.vue'),
+    meta: { requiresAuth: false, screen: 'public', adminOnly: false }
+  },
+  {
     path: '/',
     redirect: '/dashboard',
     meta: { requiresAuth: true, screen: 'admin' },
@@ -48,6 +54,12 @@ const routes = [
         path: 'stat',
         name: 'PointStat',
         component: () => import('@/views/PointStat/index.vue'),
+        meta: { requiresAuth: true, screen: 'admin', adminOnly: true }
+      },
+      {
+        path: 'parking',
+        name: 'ParkingApply',
+        component: () => import('@/views/ParkingApply/index.vue'),
         meta: { requiresAuth: true, screen: 'admin', adminOnly: true }
       },
       {

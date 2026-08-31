@@ -25,11 +25,7 @@ export function updatePoint(data) {
 }
 
 export function deletePoint(id) {
-  return request({
-    url: '/api/point/delete',
-    method: 'post',
-    data: id
-  })
+  return request.delete(`/api/point/delete/${id}`)
 }
 
 export function changePointStatus(data) {
