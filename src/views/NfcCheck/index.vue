@@ -346,7 +346,7 @@ const handleSubmit = async () => {
       pointId: realNfcPointId,
       longitude: location.longitude,
       latitude: location.latitude,
-      deviceInfo: navigator.userAgent,
+      deviceInfo: navigator.userAgent.slice(0, 200),
       remark: remark.value.trim(),
       depId: userInfo.value.depId ?? null
     })
