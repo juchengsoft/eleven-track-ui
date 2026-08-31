@@ -35,3 +35,7 @@ export function changePassword(data) {
 export function updateProfile(data) {
   return request.put('/api/user/profile', data)
 }
+
+export function getDepSelect() {
+  return request.get('/api/user/dep')
+}

@@ -123,7 +123,8 @@ const handleLogin = async () => {
       id: payload.userId ?? payload.id,
       role: payload.role,
       nickName: payload.nickName,
-      username: payload.username
+      username: payload.username,
+      depId: payload.depId ?? null
     }
     userStore.setToken(token)
     userStore.setUserInfo(user)

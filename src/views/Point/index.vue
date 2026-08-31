@@ -72,25 +72,14 @@
         <el-table-column label="经度" prop="longitude" width="140" show-overflow-tooltip />
         <el-table-column label="纬度" prop="latitude" width="140" show-overflow-tooltip />
         <el-table-column label="详细地址" prop="address" min-width="180" show-overflow-tooltip />
-        <el-table-column label="负责人" width="110" align="center">
+        <el-table-column label="所属部门" width="150" align="center">
           <template #default="{ row }">
             <div class="col-user">
               <el-avatar :size="24" class="col-user__avatar">
-                <el-icon :size="14"><User /></el-icon>
+                <el-icon :size="14"><OfficeBuilding /></el-icon>
               </el-avatar>
-              <span class="col-user__name">{{ getResponsibleName(row.userId) }}</span>
+              <span class="col-user__name">{{ getDepName(row.depId) }}</span>
             </div>
-          </template>
-        </el-table-column>
-        <el-table-column label="NFC链接" min-width="200" show-overflow-tooltip>
-          <template #default="{ row }">
-            <template v-if="row.nfcLink">
-              <el-link type="primary" :underline="false" @click="copyLink(row)" class="col-link">
-                <el-icon :size="13"><Link /></el-icon>
-                <span>{{ row.nfcLink }}</span>
-              </el-link>
-            </template>
-            <span v-else class="text-muted">—</span>
           </template>
         </el-table-column>
         <el-table-column label="排序" prop="sort" width="70" align="center" />
@@ -196,13 +185,13 @@
           </el-col>
 
           <el-col :span="24">
-            <el-form-item label="负责人" prop="userId">
-              <el-select v-model="form.userId" placeholder="请选择负责人" filterable clearable style="width:100%">
+            <el-form-item label="负责人" prop="depId">
+              <el-select v-model="form.depId" placeholder="请选择部门" clearable style="width:100%">
                 <el-option
-                  v-for="u in userOptions"
-                  :key="u.id"
-                  :label="u.nickName || u.username"
-                  :value="u.id"
+                  v-for="item in depOptions"
+                  :key="item.id"
+                  :label="item.depName"
+                  :value="item.id"
                 />
               </el-select>
             </el-form-item>
@@ -252,7 +241,7 @@ import {
   Search,
   Location,
   MapLocation,
-  User,
+  OfficeBuilding,
   Link,
   CircleClose,
   CircleCheck,
@@ -265,7 +254,7 @@ import {
   deletePoint,
   changePointStatus
 } from '@/api/point'
-import { getUserSelect } from '@/api/record'
+import { getDepSelect } from '@/api/user'
 
 const loading = ref(false)
 const submitLoading = ref(false)
@@ -273,7 +262,7 @@ const tableData = ref([])
 const total = ref(0)
 const pageNum = ref(1)
 const pageSize = ref(10)
-const userOptions = ref([])
+const depOptions = ref([])
 
 const queryForm = ref({
   pointName: '',
@@ -308,10 +297,13 @@ function getInitForm () {
   }
 }
 
-const loadUserOptions = async () => {
+const loadDepOptions = async () => {
   try {
-    const res = await getUserSelect()
-    userOptions.value = res.data || []
+    const dep = await getDepSelect()
+    depOptions.value = (dep.data || []).map(item => ({
+      id: item.value,
+      depName: item.label
+    }))
   } catch (_) {}
 }
 
@@ -421,10 +413,10 @@ const handleDelete = async (row) => {
   } catch (_) {}
 }
 
-const getResponsibleName = (uid) => {
-  if (!uid) return '—'
-  const u = userOptions.value.find(item => item.id === uid)
-  return u ? (u.nickName || u.username) : `用户#${uid}`
+const getDepName = (depId) => {
+  if(!depId) return ''
+  const item = depOptions.value.find(d => d.id === depId)
+  return item?.depName || ''
 }
 
 const formatTime = (t) => {
@@ -433,7 +425,7 @@ const formatTime = (t) => {
 }
 
 onMounted(() => {
-  loadUserOptions()
+  loadDepOptions()
   getList()
 })
 </script>

@@ -347,7 +347,8 @@ const handleSubmit = async () => {
       longitude: location.longitude,
       latitude: location.latitude,
       deviceInfo: navigator.userAgent,
-      remark: remark.value.trim()
+      remark: remark.value.trim(),
+      depId: userInfo.value.depId ?? null
     })
     const data = res.data
 

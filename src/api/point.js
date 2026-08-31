@@ -35,3 +35,7 @@ export function changePointStatus(data) {
     data
   })
 }
+
+export function getDepSelect() {
+  return request.get('/api/user/dep')
+}

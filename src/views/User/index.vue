@@ -71,6 +71,11 @@
             <span class="col-name">{{ row.nickName || '—' }}</span>
           </template>
         </el-table-column>
+        <el-table-column label="部门" width="160" show-overflow-tooltip>
+          <template #default="{ row }">
+            <span>{{ getDepName(row.depId) || '—' }}</span>
+          </template>
+        </el-table-column>
         <el-table-column label="手机号" width="130">
           <template #default="{ row }">
             <el-tooltip v-if="row.phone" :content="row.phone" placement="top">
@@ -116,7 +121,7 @@
         </el-table-column>
         <el-table-column label="操作" width="280" fixed="right" align="center">
           <template #default="{ row }">
-            <template v-if="!(userStore.userInfo.role === 1) && row.role === 1">
+            <template v-if="!(userStore.userInfo?.role === 1) && row.role === 1">
               <el-tooltip content="普通管理员不可操作超级管理员账号" placement="top">
                 <el-button link type="primary" :icon="Edit" disabled />
               </el-tooltip>
@@ -192,6 +197,16 @@
         </el-form-item>
         <el-form-item label="姓名/昵称" prop="nickName">
           <el-input v-model="form.nickName" placeholder="请输入显示名称" />
+        </el-form-item>
+        <el-form-item label="部门" prop="depId">
+          <el-select v-model="form.depId" placeholder="请选择部门" clearable style="width:100%">
+            <el-option
+              v-for="item in depOptions"
+              :key="item.id"
+              :label="item.depName"
+              :value="item.id"
+            />
+          </el-select>
         </el-form-item>
         <el-form-item label="手机号" prop="phone">
           <el-input v-model="form.phone" placeholder="请输入 11 位手机号" maxlength="11" />
@@ -275,6 +290,7 @@ import {
   addUser,
   updateUser,
   deleteUser,
+  getDepSelect,
   resetUserPwd,
   changeUserStatus
 } from '@/api/user'
@@ -283,6 +299,7 @@ const loading = ref(false)
 const submitLoading = ref(false)
 const resetLoading = ref(false)
 const tableData = ref([])
+const depOptions = ref([])
 const total = ref(0)
 const pageNum = ref(1)
 const pageSize = ref(10)
@@ -302,12 +319,19 @@ function getInitForm () {
     username: '',
     password: '',
     nickName: '',
+    depId: null,
     phone: '',
     role: 2,
     status: 1
   }
 }
 const form = ref(getInitForm())
+
+const getDepName = (depId) => {
+  if(!depId) return ''
+  const item = depOptions.value.find(d => d.id === depId)
+  return item?.depName || ''
+}
 
 const rules = {
   username: [{ required: true, message: '请输入登录账号', trigger: 'blur' }],
@@ -316,6 +340,7 @@ const rules = {
     { min: 6, message: '密码至少 6 位', trigger: 'blur' }
   ],
   nickName: [{ required: true, message: '请输入姓名/昵称', trigger: 'blur' }],
+  depId: [{ required: true, message: '请选择部门', trigger: 'change' }],
   phone: [
     { required: true, message: '请输入手机号', trigger: 'blur' },
     { pattern: /^1[3-9]\d{9}$/, message: '手机号格式不正确', trigger: 'blur' }
@@ -380,9 +405,19 @@ const handleSearch = () => {
   getList()
 }
 const handleReset = () => {
-  queryForm.value = { keyword: '', role: '', status: '' }
+  queryForm.value = { keyword: '', depId: undefined, role: '', status: '' }
   pageNum.value = 1
   getList()
+}
+
+const loadDepOptions = async () => {
+  try {
+    const dep = await getDepSelect()
+    depOptions.value = (dep.data || []).map(item => ({
+      id: item.value,
+      depName: item.label
+    }))
+  } catch (_) {}
 }
 
 const openDialog = (row) => {
@@ -497,6 +532,7 @@ const maskAccount = (account) => {
 }
 
 onMounted(() => {
+  loadDepOptions()
   getList()
 })
 </script>
