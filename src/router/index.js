@@ -23,9 +23,15 @@ const routes = [
   },
   {
     path: '/apply/parking',
-    name: 'ParkingGuest ',
+    name: 'ParkingGuest',
     component: () => import('@/views/ParkingGuest/index.vue'),
     meta: { requiresAuth: false, screen: 'public', adminOnly: false }
+  },
+  {
+    path: '/audit/parking',
+    name: 'ParkingAudit',
+    component: () => import('@/views/ParkingAudit/index.vue'),
+    meta: { requiresAuth: true, screen: 'public', adminOnly: false }
   },
   {
     path: '/',
@@ -106,13 +112,13 @@ router.beforeEach((to, from, next) => {
     }
     const userStore = useUserStore()
     const role = userStore.userInfo?.role
-    return next(role === 1 ? '/dashboard' : '/workspace')
+    return next(role === 2 ? '/workspace' : '/dashboard')
   }
 
   if (token) {
     const userStore = useUserStore()
     const role = userStore.userInfo?.role
-    const isInspector = role !== undefined && role !== 1
+    const isInspector = role !== undefined && role == 2
     const inAdminLayout = to.matched.some(r => r.meta.screen === 'admin')
 
     if (isInspector && inAdminLayout) {

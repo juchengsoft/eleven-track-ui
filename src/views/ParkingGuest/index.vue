@@ -20,7 +20,7 @@
           <el-icon :size="52"><Finished /></el-icon>
         </div>
         <h2 class="success-panel__title">提交成功</h2>
-        <p class="success-panel__sub">您的临时停车申请已登记</p>
+        <p class="success-panel__sub">申请已提交，请等待物业审批，通过后方可入场</p>
         <div class="success-panel__no" v-if="applyNo">
           <span class="label">申请编号</span>
           <span class="value">{{ applyNo }}</span>
@@ -30,7 +30,7 @@
             <el-icon :size="16"><EditPen /></el-icon>
             <span>再填一份</span>
           </button>
-          <p class="success-panel__hint">可关闭本页面，祝您停车顺利</p>
+          <p class="success-panel__hint">可凭申请编号到岗亭查询进度</p>
         </div>
       </section>
 
@@ -124,7 +124,7 @@
               <span>提交申请</span>
             </template>
           </button>
-          <p class="submit-hint">提交后将自动生成申请编号并登记留痕</p>
+          <p class="submit-hint">提交后将生成申请编号，由物业审批后放行</p>
         </section>
       </template>
     </main>

@@ -113,6 +113,7 @@ const isFullScreen = computed(() => {
   return route.path === '/login'
     || route.path.startsWith('/check')
     || route.path.startsWith('/apply')
+    || route.path.startsWith('/audit')
     || route.path === '/workspace'
 })
 

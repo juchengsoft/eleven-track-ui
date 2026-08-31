@@ -17,7 +17,6 @@ app.use(createPinia())
 app.use(router)
 app.use(ElementPlus)
 
-// 等待路由就绪后再挂载，避免首帧路由未解析导致 Layout 闪烁
 router.isReady().then(() => {
   app.mount('#app')
 })

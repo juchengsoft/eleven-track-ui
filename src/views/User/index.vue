@@ -25,6 +25,7 @@
           <el-form-item label="角色">
             <el-select v-model="queryForm.role" placeholder="全部" clearable style="width:140px">
               <el-option label="超级管理员" :value="1" />
+              <el-option label="普通管理员" :value="3" />
               <el-option label="巡检员" :value="2" />
             </el-select>
           </el-form-item>
@@ -62,7 +63,7 @@
         </el-table-column>
         <el-table-column label="登录账号" prop="username" min-width="120">
           <template #default="{ row }">
-            <span class="col-username">{{ row.username }}</span>
+            <span class="col-username">{{ maskAccount(row.username) }}</span>
           </template>
         </el-table-column>
         <el-table-column label="姓名" prop="nickName" min-width="110" show-overflow-tooltip>
@@ -70,19 +71,26 @@
             <span class="col-name">{{ row.nickName || '—' }}</span>
           </template>
         </el-table-column>
-        <el-table-column label="手机号" prop="phone" width="130" />
-        <el-table-column label="角色" width="120" align="center">
+        <el-table-column label="手机号" width="130">
+          <template #default="{ row }">
+            <el-tooltip v-if="row.phone" :content="row.phone" placement="top">
+              <span class="col-phone">{{ maskPhone(row.phone) }}</span>
+            </el-tooltip>
+            <span v-else>—</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="角色" width="140" align="center">
           <template #default="{ row }">
             <el-tag
               size="small"
               effect="light"
               round
-              :type="row.role === 1 ? 'danger' : 'primary'"
+              :type="row.role === 1 ? 'danger' : row.role === 3 ? 'warning' : 'primary'"
             >
               <el-icon :size="12" style="margin-right:2px">
-                <component :is="row.role === 1 ? 'Finished' : 'User'" />
+                <component :is="row.role === 1 ? 'Finished' : row.role === 3 ? 'UserFilled' : 'User'" />
               </el-icon>
-              {{ row.role === 1 ? '超级管理员' : '巡检员' }}
+              {{ row.role === 1 ? '超级管理员' : row.role === 3 ? '普通管理员' : '巡检员' }}
             </el-tag>
           </template>
         </el-table-column>
@@ -106,25 +114,42 @@
             </span>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="240" fixed="right" align="center">
+        <el-table-column label="操作" width="280" fixed="right" align="center">
           <template #default="{ row }">
-            <el-tooltip content="编辑账号" placement="top">
-              <el-button link type="primary" :icon="Edit" @click="openDialog(row)" />
-            </el-tooltip>
-            <el-tooltip content="重置密码" placement="top">
-              <el-button link type="warning" :icon="Lock" @click="handleResetPwd(row)" />
-            </el-tooltip>
-            <el-tooltip :content="row.status === 1 ? '禁用账号' : '启用账号'" placement="top">
-              <el-button
-                link
-                :type="row.status === 1 ? 'info' : 'success'"
-                :icon="row.status === 1 ? 'CircleClose' : 'CircleCheck'"
-                @click="changeStatus(row)"
-              />
-            </el-tooltip>
-            <el-tooltip content="删除账号" placement="top">
-              <el-button link type="danger" :icon="Delete" @click="handleDelete(row)" />
-            </el-tooltip>
+            <template v-if="!(userStore.userInfo.role === 1) && row.role === 1">
+              <el-tooltip content="普通管理员不可操作超级管理员账号" placement="top">
+                <el-button link type="primary" :icon="Edit" disabled />
+              </el-tooltip>
+              <el-tooltip content="普通管理员不可重置超级管理员密码" placement="top">
+                <el-button link type="warning" :icon="Lock" disabled />
+              </el-tooltip>
+              <el-tooltip content="普通管理员不可操作超级管理员账号" placement="top">
+                <el-button link type="info" :icon="CircleClose" disabled />
+              </el-tooltip>
+              <el-tooltip content="普通管理员不可删除超级管理员账号" placement="top">
+                <el-button link type="danger" :icon="Delete" disabled />
+              </el-tooltip>
+            </template>
+
+            <template v-else>
+              <el-tooltip content="编辑账号" placement="top">
+                <el-button link type="primary" :icon="Edit" @click="openDialog(row)" />
+              </el-tooltip>
+              <el-tooltip content="重置密码" placement="top">
+                <el-button link type="warning" :icon="Lock" @click="handleResetPwd(row)" />
+              </el-tooltip>
+              <el-tooltip :content="row.status === 1 ? '禁用账号' : '启用账号'" placement="top">
+                <el-button
+                  link
+                  :type="row.status === 1 ? 'info' : 'success'"
+                  :icon="row.status === 1 ? 'CircleClose' : 'CircleCheck'"
+                  @click="changeStatus(row)"
+                />
+              </el-tooltip>
+              <el-tooltip content="删除账号" placement="top">
+                <el-button link type="danger" :icon="Delete" @click="handleDelete(row)" />
+              </el-tooltip>
+            </template>
           </template>
         </el-table-column>
       </el-table>
@@ -134,7 +159,7 @@
           <el-icon :size="14" color="#86909c"><DataAnalysis /></el-icon>
           <span>共 <b>{{ total }}</b> 个账号</span>
           <span class="table-card__stats-divider"></span>
-          <span>当前显示第 <b>{{ (pageNum - 1) * pageSize + 1 }}</b> - <b>{{ Math.min(pageNum * pageSize, total) }}</b> 条</span>
+          <span>当前显示第 <b>{{ (pageNum - 1) * pageSize + 1 }}</b>‑<b>{{ Math.min(pageNum * pageSize, total) }}</b> 条</span>
         </div>
         <el-pagination
           v-model:current-page="pageNum"
@@ -174,7 +199,8 @@
         <el-form-item label="角色" prop="role">
           <el-radio-group v-model="form.role">
             <el-radio :value="2">巡检员</el-radio>
-            <el-radio :value="1">超级管理员</el-radio>
+            <el-radio :value="3">普通管理员</el-radio>
+            <el-radio :value="1" :disabled="userStore.userInfo?.role !== 1">超级管理员</el-radio>
           </el-radio-group>
         </el-form-item>
         <el-form-item label="状态" prop="status">
@@ -226,6 +252,9 @@
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { useUserStore } from '@/store/user'
+const userStore = useUserStore()
+
 import {
   Plus,
   Refresh,
@@ -266,6 +295,18 @@ const queryForm = ref({
 
 const dialogVisible = ref(false)
 const formRef = ref(null)
+
+function getInitForm () {
+  return {
+    id: null,
+    username: '',
+    password: '',
+    nickName: '',
+    phone: '',
+    role: 2,
+    status: 1
+  }
+}
 const form = ref(getInitForm())
 
 const rules = {
@@ -282,18 +323,6 @@ const rules = {
   role: [{ required: true, message: '请选择角色', trigger: 'change' }]
 }
 
-function getInitForm () {
-  return {
-    id: null,
-    username: '',
-    password: '',
-    nickName: '',
-    phone: '',
-    role: 2,
-    status: 1
-  }
-}
-
 const resetPwdVisible = ref(false)
 const resetPwdFormRef = ref(null)
 const resetPwdForm = reactive({
@@ -302,6 +331,7 @@ const resetPwdForm = reactive({
   password: '',
   confirmPassword: ''
 })
+
 const validateConfirmPassword = (rule, value, callback) => {
   if (value !== resetPwdForm.password) {
     callback(new Error('两次输入的密码不一致'))
@@ -453,7 +483,22 @@ const formatTime = (t) => {
   return String(t).replace('T', ' ').slice(0, 16)
 }
 
-onMounted(getList)
+const maskPhone = (phone) => {
+  if (!phone || phone.length !== 11) return phone || '—'
+  return phone.slice(0, 3) + '****' + phone.slice(7)
+}
+
+const maskAccount = (account) => {
+  const str = String(account || '')
+  if (/^1\d{10}$/.test(str)) {
+    return maskPhone(str)
+  }
+  return str
+}
+
+onMounted(() => {
+  getList()
+})
 </script>
 
 <style scoped lang="scss">
@@ -471,7 +516,6 @@ onMounted(getList)
       font-weight: 600;
       color: #1d2129;
     }
-
     &__icon {
       color: #fff;
       background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%);
@@ -479,7 +523,6 @@ onMounted(getList)
       border-radius: 8px;
       box-shadow: 0 2px 8px rgba(155, 89, 182, 0.3);
     }
-
     &__subtitle {
       margin-top: 6px;
       font-size: 13px;
@@ -492,7 +535,6 @@ onMounted(getList)
     border: 1px solid #eef0f3;
     border-radius: 10px;
     overflow: hidden;
-
     :deep(.el-card__body) {
       padding: 16px 20px;
     }
@@ -501,85 +543,65 @@ onMounted(getList)
   .filter-card {
     margin-bottom: 14px;
     background: #fbf6ff;
-
     &__inner {
       display: flex;
       align-items: center;
-      justify-content: space-between;
-      column-gap: 20px;
-      row-gap: 8px;
       flex-wrap: wrap;
+      gap: 8px 20px;
     }
-
     .filter-form {
       display: flex;
       flex-wrap: wrap;
       align-items: center;
       flex: 1;
       min-width: 0;
-      row-gap: 4px;
-
       :deep(.el-form-item) {
         margin-bottom: 0;
       }
-    }
-
-    &__actions {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      flex-shrink: 0;
     }
   }
 
   .table-card {
     background: #fff;
-
     &__header {
       display: flex;
       justify-content: space-between;
       align-items: center;
       margin-bottom: 8px;
-
       &-left {
         display: flex;
         align-items: center;
         gap: 10px;
       }
     }
-
     &__bottom-bar {
       display: flex;
-      align-items: center;
       justify-content: space-between;
+      align-items: center;
       margin-top: 16px;
       padding-top: 14px;
       border-top: 1px dashed #eef0f3;
       flex-wrap: wrap;
-      gap: 10px;
+      gap:10px;
     }
-
     &__stats-bar {
       display: inline-flex;
       align-items: center;
       gap: 8px;
       font-size: 12px;
       color: #4e5969;
-
       b {
         color: #9b59b6;
-        font-size: 13px;
-        font-weight: 600;
-        margin: 0 2px;
+        font-size:13px;
+        font-weight:600;
+        margin:0 2px;
       }
     }
-
     &__stats-divider {
-      display: inline-block;
-      width: 1px;
-      height: 12px;
-      background: #e5e6eb;
-      margin: 0 4px;
+      width:1px;
+      height:12px;
+      background:#e5e6eb;
+      margin:0 4px;
     }
   }
 
@@ -589,107 +611,107 @@ onMounted(getList)
         background-color: #fafbfc;
         color: #4e5969;
         font-weight: 500;
-        border-bottom: 1px solid #eef0f3;
-        border-right: 1px solid #eef0f3;
-
-        &:last-child { border-right: none; }
+        border-bottom:1px solid #eef0f3;
+        border-right:1px solid #eef0f3;
+        &:last-child {
+          border-right:none;
+        }
       }
     }
-
     :deep(.el-table__row) {
-      transition: background-color 0.15s ease;
-
+      transition: background 0.15s ease;
       &:hover td.el-table__cell {
         background-color: #fbf6ff !important;
       }
     }
-
     :deep(.el-table td.el-table__cell),
     :deep(.el-table th.el-table__cell.is-leaf) {
-      border-bottom: 1px solid #f2f3f5;
+      border-bottom:1px solid #f2f3f5;
     }
-
     :deep(td.el-table__cell) {
-      border-right: 1px solid #eef0f3;
-
-      &:last-child { border-right: none; }
+      border-right:1px solid #eef0f3;
+      &:last-child {
+        border-right:none;
+      }
     }
-
     :deep(.el-table__fixed-right-patch),
     :deep(.el-table__fixed-right) {
       th.el-table__cell:first-child,
-      td.el-table__cell:first-child { border-left: 1px solid #eef0f3; }
+      td.el-table__cell:first-child {
+        border-left:1px solid #eef0f3;
+      }
       th.el-table__cell,
       td.el-table__cell {
-        border-right: 1px solid #eef0f3;
-        &:last-child { border-right: none; }
+        border-right:1px solid #eef0f3;
+        &:last-child {
+          border-right:none;
+        }
       }
     }
-
-    :deep(.el-table::before) { display: none; }
-
+    :deep(.el-table::before) {
+      display:none;
+    }
     :deep(.el-table__inner-wrapper) {
-      border-radius: 8px;
-      overflow: hidden;
+      border-radius:8px;
+      overflow:hidden;
     }
   }
 
   .col-avatar {
     background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%);
-    color: #fff;
-    font-weight: 500;
-    font-size: 14px;
-    border: 2px solid #fff;
-    box-shadow: 0 1px 4px rgba(155, 89, 182, 0.25);
+    color:#fff;
+    font-weight:500;
+    font-size:14px;
+    border:2px solid #fff;
+    box-shadow:0 1px 4px rgba(155, 89, 182, 0.25);
   }
-
   .col-username {
-    color: #409eff;
+    color:#409eff;
     font-family: 'SF Mono', Menlo, Consolas, monospace;
-    font-size: 13px;
+    font-size:13px;
   }
-
   .col-name {
-    color: #1d2129;
-    font-weight: 500;
+    color:#1d2129;
+    font-weight:500;
   }
-
+  .col-phone {
+    color:#1d2129;
+    font-size:13px;
+  }
   .col-time {
-    color: #86909c;
-    font-size: 13px;
+    color:#86909c;
+    font-size:13px;
     font-family: 'SF Mono', Menlo, Consolas, monospace;
   }
 
   .status-dot {
     display: inline-block;
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    margin-right: 6px;
-    vertical-align: middle;
+    width:6px;
+    height:6px;
+    border-radius:50%;
+    margin-right:6px;
+    vertical-align:middle;
     animation: pulse 2s infinite;
-
     &--success {
-      background: #52c41a;
-      box-shadow: 0 0 0 3px rgba(82, 196, 26, 0.15);
+      background:#52c41a;
+      box-shadow:0 0 0 3px rgba(82,196,26,0.15);
     }
     &--danger {
-      background: #ff4d4f;
-      box-shadow: 0 0 0 3px rgba(255, 77, 79, 0.15);
+      background:#ff4d4f;
+      box-shadow:0 0 0 3px rgba(255,77,79,0.15);
     }
   }
-
   @keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.55; }
+    0%,100% { opacity:1; }
+    50% { opacity:0.55; }
   }
-
-  .text-muted { color: #c9cdd4; }
-
+  .text-muted {
+    color:#c9cdd4;
+  }
   .user-dialog {
     :deep(.el-dialog) {
-      border-radius: 12px;
-      overflow: hidden;
+      border-radius:12px;
+      overflow:hidden;
     }
   }
 }

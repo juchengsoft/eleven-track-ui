@@ -137,7 +137,7 @@ const handleLogin = async () => {
       }
     }
 
-    const defaultPath = user.role === 1 ? '/dashboard' : '/workspace'
+    const defaultPath = user.role === 2 ? '/workspace' : '/dashboard'
     router.replace(defaultPath)
   } catch (err) {
     console.error(err)

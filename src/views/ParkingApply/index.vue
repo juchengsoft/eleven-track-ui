@@ -14,22 +14,21 @@
           <el-form-item label="关键字">
             <el-input
               v-model="queryForm.keyword"
-              placeholder="访客姓名 / 手机号 / 车牌号"
+              placeholder="访客姓名 / 手机号 / 车牌号 / 房号"
               clearable
               @keyup.enter="handleSearch"
-              style="width:280px"
+              style="width:320px"
             >
               <template #prefix><el-icon><Search /></el-icon></template>
             </el-input>
           </el-form-item>
-          <el-form-item label="房号">
-            <el-input
-              v-model="queryForm.houseNo"
-              placeholder="如：1-1-101"
-              clearable
-              @keyup.enter="handleSearch"
-              style="width:160px"
-            />
+          <el-form-item label="审批状态">
+            <el-select v-model="queryForm.applyStatus" placeholder="全部状态" clearable style="width:140px">
+              <el-option label="待审批" :value="0" />
+              <el-option label="审批通过" :value="1" />
+              <el-option label="审批驳回" :value="2" />
+              <el-option label="已取消" :value="3" />
+            </el-select>
           </el-form-item>
           <el-form-item label="提交时间">
             <el-date-picker
@@ -70,7 +69,7 @@
       >
         <el-table-column label="申请编号" prop="applyNo" min-width="150" show-overflow-tooltip>
           <template #default="{ row }">
-            <el-link type="primary" :underline="false" @click="openDetail(row)" class="col-apply-no">
+            <el-link type="primary" underline="never" @click="openDetail(row)" class="col-apply-no">
               <el-icon :size="13"><Document /></el-icon>
               <span>{{ row.applyNo }}</span>
             </el-link>
@@ -89,6 +88,13 @@
         </el-table-column>
         <el-table-column label="被访业主" prop="ownerName" min-width="100" show-overflow-tooltip />
         <el-table-column label="房号" prop="houseNo" width="110" show-overflow-tooltip />
+        <el-table-column label="审批状态" width="110" align="center">
+          <template #default="{ row }">
+            <el-tag :type="getStatusTagType(row.applyStatus)" size="small">
+              {{ getStatusText(row.applyStatus) }}
+            </el-tag>
+          </template>
+        </el-table-column>
         <el-table-column label="停车时段" min-width="300" show-overflow-tooltip>
           <template #default="{ row }">
             <div class="col-time-range">
@@ -110,8 +116,11 @@
             <span class="col-time">{{ formatTime(row.createTime) }}</span>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="80" fixed="right" align="center">
+        <el-table-column label="操作" width="140" fixed="right" align="center">
           <template #default="{ row }">
+            <el-tooltip content="审批" placement="top" v-if="row.applyStatus === 0">
+              <el-button link type="primary" :icon="Check" @click="openAuditDialog(row)" />
+            </el-tooltip>
             <el-tooltip content="删除" placement="top">
               <el-button link type="danger" :icon="Delete" @click="handleDelete(row)" />
             </el-tooltip>
@@ -140,7 +149,7 @@
     <el-dialog
       v-model="detailVisible"
       title="申请详情"
-      width="560px"
+      width="620px"
       :close-on-click-modal="true"
       class="apply-dialog"
     >
@@ -157,7 +166,18 @@
         <el-descriptions-item label="房号">{{ detail.houseNo }}</el-descriptions-item>
         <el-descriptions-item label="停车开始">{{ formatTime(detail.applyStart) }}</el-descriptions-item>
         <el-descriptions-item label="停车结束">{{ formatTime(detail.applyEnd) }}</el-descriptions-item>
-        <el-descriptions-item label="提交时间" :span="2">{{ formatTime(detail.createTime) }}</el-descriptions-item>
+        <el-descriptions-item label="审批状态">
+          <el-tag :type="getStatusTagType(detail.applyStatus)" size="small">
+            {{ getStatusText(detail.applyStatus) }}
+          </el-tag>
+        </el-descriptions-item>
+        <el-descriptions-item label="提交时间">{{ formatTime(detail.createTime) }}</el-descriptions-item>
+        <el-descriptions-item label="审批人">{{ detail.auditUserName || '—' }}</el-descriptions-item>
+        <el-descriptions-item label="审批时间">{{ formatTime(detail.auditTime) }}</el-descriptions-item>
+        <el-descriptions-item label="审批意见" :span="2">
+          <span v-if="detail.auditRemark">{{ detail.auditRemark }}</span>
+          <span v-else class="text-muted">无</span>
+        </el-descriptions-item>
         <el-descriptions-item label="备注" :span="2">
           <span v-if="detail.remark">{{ detail.remark }}</span>
           <span v-else class="text-muted">无</span>
@@ -165,7 +185,29 @@
       </el-descriptions>
       <template #footer>
         <el-button @click="detailVisible = false">关闭</el-button>
+        <el-button type="primary" @click="openAuditDialog(detail)" v-if="detail?.applyStatus ===0">审批</el-button>
         <el-button type="danger" :icon="Delete" @click="handleDelete(detail)" v-if="detail">删除记录</el-button>
+      </template>
+    </el-dialog>
+
+    <el-dialog v-model="auditVisible" title="停车申请审批" width="520px">
+      <el-form :model="auditForm" label-width="90px">
+        <el-form-item label="申请单号">
+          <span>{{ auditRow?.applyNo }}</span>
+        </el-form-item>
+        <el-form-item label="审批结果">
+          <el-radio-group v-model="auditForm.auditResult">
+            <el-radio :label="1">审批通过</el-radio>
+            <el-radio :label="2">审批驳回</el-radio>
+          </el-radio-group>
+        </el-form-item>
+        <el-form-item label="审批意见">
+          <el-input v-model="auditForm.auditRemark" type="textarea" :rows="4" placeholder="驳回请填写原因"></el-input>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="auditVisible=false">取消</el-button>
+        <el-button type="primary" @click="submitAudit">确定提交</el-button>
       </template>
     </el-dialog>
   </div>
@@ -183,9 +225,10 @@ import {
   Document,
   Clock,
   Delete,
-  DataAnalysis
+  DataAnalysis,
+  Check
 } from '@element-plus/icons-vue'
-import { getParkingApplyList, deleteParkingApply } from '@/api/parkingApply'
+import { getParkingApplyList, deleteParkingApply, auditParkingApply } from '@/api/parkingApply'
 
 const loading = ref(false)
 const tableData = ref([])
@@ -195,12 +238,39 @@ const pageSize = ref(10)
 
 const queryForm = ref({
   keyword: '',
-  houseNo: '',
+  applyStatus: undefined,
   dateRange: []
 })
 
 const detailVisible = ref(false)
 const detail = ref(null)
+
+const auditVisible = ref(false)
+const auditRow = ref(null)
+const auditForm = ref({
+  auditResult: 1,
+  auditRemark: ''
+})
+
+const getStatusText = (val) => {
+  const map = {
+    0: '待审批',
+    1: '审批通过',
+    2: '审批驳回',
+    3: '已取消'
+  }
+  return map[val] || '未知'
+}
+
+const getStatusTagType = (val) => {
+  const map = {
+    0: 'info',
+    1: 'success',
+    2: 'danger',
+    3: ''
+  }
+  return map[val]
+}
 
 const getList = async () => {
   loading.value = true
@@ -209,7 +279,7 @@ const getList = async () => {
       pageNum: pageNum.value,
       pageSize: pageSize.value,
       keyword: queryForm.value.keyword || undefined,
-      houseNo: queryForm.value.houseNo || undefined,
+      applyStatus: queryForm.value.applyStatus,
       beginTime: queryForm.value.dateRange?.[0] || undefined,
       endTime: queryForm.value.dateRange?.[1] || undefined
     }
@@ -230,7 +300,7 @@ const handleSearch = () => {
 }
 
 const handleReset = () => {
-  queryForm.value = { keyword: '', houseNo: '', dateRange: [] }
+  queryForm.value = { keyword: '', applyStatus: undefined, dateRange: [] }
   pageNum.value = 1
   getList()
 }
@@ -263,6 +333,31 @@ const copyApplyLink = async () => {
   } catch (_) {
     ElMessage.warning('复制失败，请手动复制：' + url)
   }
+}
+
+const openAuditDialog = (row) => {
+  auditRow.value = row
+  auditForm.value.auditResult = 1
+  auditForm.value.auditRemark = ''
+  auditVisible.value = true
+}
+
+const submitAudit = async () => {
+  if(auditForm.value.auditResult ===2 && !auditForm.value.auditRemark.trim()){
+    ElMessage.warning('驳回必须填写审批意见')
+    return
+  }
+  try {
+    await auditParkingApply({
+      id: auditRow.value.id,
+      auditResult: auditForm.value.auditResult,
+      auditRemark: auditForm.value.auditRemark
+    })
+    ElMessage.success('审批完成')
+    auditVisible.value = false
+    detailVisible.value = false
+    getList()
+  }catch(e){}
 }
 
 const formatTime = (t) => {

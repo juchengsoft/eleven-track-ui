@@ -19,3 +19,19 @@ export function submitParkingApply(data) {
     data
   })
 }
+
+export function getParkingApplyAuditList(params) {
+  return request({
+    url: '/api/parkingApply/auditList',
+    method: 'post',
+    data: params
+  })
+}
+
+export function auditParkingApply(data) {
+  return request({
+    url: '/api/parkingApply/audit',
+    method: 'post',
+    data
+  })
+}
