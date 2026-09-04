@@ -72,16 +72,34 @@
         <el-table-column label="经度" prop="longitude" width="140" show-overflow-tooltip />
         <el-table-column label="纬度" prop="latitude" width="140" show-overflow-tooltip />
         <el-table-column label="详细地址" prop="address" min-width="180" show-overflow-tooltip />
-        <el-table-column label="所属部门" width="150" align="center">
+        <el-table-column label="负责部门" width="150" show-overflow-tooltip>
           <template #default="{ row }">
-            <div class="col-user">
-              <el-avatar :size="24" class="col-user__avatar">
-                <el-icon :size="14"><OfficeBuilding /></el-icon>
-              </el-avatar>
-              <span class="col-user__name">{{ getDepName(row.depId) }}</span>
+            <div class="dep-tag-wrap">
+              <template v-if="getDepIdArr(row.depIds).length">
+                <el-tag
+                  v-for="(dId, idx) in getShowDepIdArr(row.depIds, 2)"
+                  :key="dId"
+                  size="small"
+                  effect="plain"
+                  class="dep-tag-item"
+                >
+                  {{ getDepNameById(dId) }}
+                </el-tag>
+                <el-tooltip
+                  v-if="getDepIdArr(row.depIds).length > 2"
+                  :content="getAllDepNameStr(row.depIds)"
+                  placement="top"
+                >
+                  <el-tag size="small" effect="plain" type="info">
+                    +{{ getDepIdArr(row.depIds).length - 2 }}
+                  </el-tag>
+                </el-tooltip>
+              </template>
+              <span v-else class="text-gray">未分配</span>
             </div>
           </template>
         </el-table-column>
+
         <el-table-column label="排序" prop="sort" width="70" align="center" />
         <el-table-column label="状态" width="100" align="center">
           <template #default="{ row }">
@@ -185,8 +203,14 @@
           </el-col>
 
           <el-col :span="24">
-            <el-form-item label="负责人" prop="depId">
-              <el-select v-model="form.depId" placeholder="请选择部门" clearable style="width:100%">
+            <el-form-item label="负责部门" prop="depIds">
+              <el-select
+                v-model="form.depIds"
+                multiple
+                placeholder="可选择多个负责部门"
+                clearable
+                style="width:100%"
+              >
                 <el-option
                   v-for="item in depOptions"
                   :key="item.id"
@@ -242,7 +266,6 @@ import {
   Location,
   MapLocation,
   OfficeBuilding,
-  Link,
   CircleClose,
   CircleCheck,
   DataAnalysis
@@ -290,7 +313,7 @@ function getInitForm () {
     latitude: null,
     address: '',
     nfcLink: '',
-    userId: null,
+    depIds: [],
     status: 1,
     remark: '',
     sort: 0
@@ -339,7 +362,13 @@ const handleReset = () => {
 const openDialog = (row) => {
   if (formRef.value) formRef.value.clearValidate()
   if (row) {
-    form.value = { ...getInitForm(), ...row }
+    const temp = { ...getInitForm(), ...row }
+    if (typeof temp.depIds === 'string' && temp.depIds) {
+      temp.depIds = temp.depIds.split(',')
+        .filter(s => !!s.trim())
+        .map(Number)
+    }
+    form.value = temp
   } else {
     form.value = getInitForm()
   }
@@ -360,11 +389,15 @@ const submitForm = async () => {
   }
   submitLoading.value = true
   try {
+    const submitData = { ...form.value }
+    if (Array.isArray(submitData.depIds)) {
+      submitData.depIds = submitData.depIds.join(',')
+    }
     if (form.value.id) {
-      await updatePoint(form.value)
+      await updatePoint(submitData)
       ElMessage.success('更新成功')
     } else {
-      await addPoint(form.value)
+      await addPoint(submitData)
       ElMessage.success('新增成功')
     }
     dialogVisible.value = false
@@ -413,10 +446,25 @@ const handleDelete = async (row) => {
   } catch (_) {}
 }
 
-const getDepName = (depId) => {
-  if(!depId) return ''
-  const item = depOptions.value.find(d => d.id === depId)
-  return item?.depName || ''
+const getDepIdArr = (depIdsStr) => {
+  if (!depIdsStr) return []
+  return depIdsStr.split(',')
+    .filter(s => !!s.trim())
+    .map(Number)
+}
+
+const getShowDepIdArr = (depIdsStr, limit = 2) => {
+  const arr = getDepIdArr(depIdsStr)
+  return arr.slice(0, limit)
+}
+
+const getDepNameById = (depId) => {
+  const item = depOptions.value.find(o => o.id === depId)
+  return item?.depName || '未知部门'
+}
+
+const getAllDepNameStr = (depIdsStr) => {
+  return getDepIdArr(depIdsStr).map(id => getDepNameById(id)).join('、')
 }
 
 const formatTime = (t) => {
@@ -622,29 +670,6 @@ onMounted(() => {
     font-weight: 500;
   }
 
-  .col-user {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-
-    &__avatar {
-      background: rgba(64, 158, 255, 0.1);
-      color: #409eff;
-    }
-
-    &__name {
-      font-size: 13px;
-      color: #4e5969;
-    }
-  }
-
-  .col-link {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    font-size: 13px;
-  }
-
   .col-time {
     color: #86909c;
     font-size: 13px;
@@ -676,10 +701,6 @@ onMounted(() => {
     50% { opacity: 0.55; }
   }
 
-  .text-muted {
-    color: #c9cdd4;
-  }
-
   .point-dialog {
     :deep(.el-dialog) {
       border-radius: 12px;
@@ -689,6 +710,20 @@ onMounted(() => {
     &__form {
       padding: 4px 4px 0;
     }
+  }
+  .dep-tag-wrap {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+  }
+  .dep-tag-item {
+    max-width: 80px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .text-gray {
+    color: #909399;
   }
 }
 </style>

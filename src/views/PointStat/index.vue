@@ -242,10 +242,10 @@ const detailVisible = ref(false)
 const detailData = ref(null)
 
 const getDefaultDateRange = () => {
-  const end = new Date()
-  const start = new Date(end.getTime() - 29 * 24 * 60 * 60 * 1000)
+  const now = new Date()
   const fmt = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-  return [fmt(start), fmt(end)]
+  const today = fmt(now)
+  return [today, today]
 }
 
 const queryForm = ref({

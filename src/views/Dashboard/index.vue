@@ -62,6 +62,14 @@
         </el-card>
       </el-col>
     </el-row>
+
+    <el-row :gutter="20" style="margin-top:20px">
+      <el-col :span="24">
+        <el-card shadow="hover">
+          <div ref="userBarChartRef" class="user-bar-chart"></div>
+        </el-card>
+      </el-col>
+    </el-row>
   </div>
 </template>
 
@@ -75,18 +83,29 @@ const stat = ref({
   totalPoint: 0,
   todayCheck: 0,
   normalUser: 0,
-  abnormalCount: 0
+  abnormalCount: 0,
+  trendData: [],
+  userTodayCheckList: []
 })
 
 const chartRef = ref(null)
+const userBarChartRef = ref(null)
 let chartInstance = null
+let userBarInstance = null
 
 const loadStat = async () => {
   try {
     const res = await getDashboardStat()
     stat.value = res.data
   } catch (_) {
-    stat.value = { totalPoint: 0, todayCheck: 0, normalUser: 0, abnormalCount: 0 }
+    stat.value = {
+      totalPoint: 0,
+      todayCheck: 0,
+      normalUser: 0,
+      abnormalCount: 0,
+      trendData: [],
+      userTodayCheckList: []
+    }
   }
 }
 
@@ -100,7 +119,6 @@ const initChart = () => {
     const d = new Date(now.getTime() - i * 24 * 60 * 60 * 1000)
     days.push(`${d.getMonth() + 1}-${d.getDate()}`)
   }
-
   const mockTrend = []
 
   const option = {
@@ -164,18 +182,82 @@ const initChart = () => {
       }
     ]
   }
-
   chartInstance.setOption(option)
+}
+
+const initUserBarChart = () => {
+  if (!userBarChartRef.value) return
+  userBarInstance = echarts.init(userBarChartRef.value)
+
+  const list = stat.value.userTodayCheckList ?? []
+  const sortList = [...list].sort((a, b) => b.todayCheckCount - a.todayCheckCount)
+  const yData = sortList.map(item => item.nickName || item.username)
+  const xData = sortList.map(item => item.todayCheckCount)
+
+  const option = {
+    title: {
+      text: '巡检员今日打卡次数',
+      left: 8,
+      top: 4,
+      textStyle: { fontSize: 16, fontWeight: 600, color: '#303133' }
+    },
+    tooltip: {
+      trigger: 'axis',
+      backgroundColor: 'rgba(50,50,50,0.9)',
+      textStyle: { color: '#fff' }
+    },
+    grid: {
+      left: '12%',
+      right: '6%',
+      bottom: '3%',
+      top: 50,
+      containLabel: true
+    },
+    xAxis: {
+      type: 'value',
+      name: '打卡次数',
+      axisLine: { show: false },
+      axisTick: { show: false },
+      splitLine: { lineStyle: { color: '#f0f2f5', type: 'dashed' } }
+    },
+    yAxis: {
+      type: 'category',
+      data: yData,
+      axisLine: { lineStyle: { color: '#e4e7ed' } },
+      axisLabel: { color: '#606266' }
+    },
+    series: [
+      {
+        name: '打卡次数',
+        type: 'bar',
+        barWidth: '50%',
+        data: xData,
+        itemStyle: {
+          color: new echarts.graphic.LinearGradient(1, 0, 0, 0, [
+            { offset: 0, color: '#85ce61' },
+            { offset: 1, color: '#67C23A' }
+          ])
+        },
+        label: {
+          show: true,
+          position: 'right'
+        }
+      }
+    ]
+  }
+  userBarInstance.setOption(option)
 }
 
 const handleResize = () => {
   chartInstance && chartInstance.resize()
+  userBarInstance && userBarInstance.resize()
 }
 
 onMounted(async () => {
   await loadStat()
   await nextTick()
   initChart()
+  initUserBarChart()
   window.addEventListener('resize', handleResize)
 })
 
@@ -184,6 +266,10 @@ onBeforeUnmount(() => {
   if (chartInstance) {
     chartInstance.dispose()
     chartInstance = null
+  }
+  if (userBarInstance) {
+    userBarInstance.dispose()
+    userBarInstance = null
   }
 })
 </script>
@@ -272,6 +358,11 @@ onBeforeUnmount(() => {
   .trend-chart {
     width: 100%;
     height: 360px;
+  }
+
+  .user-bar-chart {
+    width: 100%;
+    height: 380px;
   }
 }
 </style>

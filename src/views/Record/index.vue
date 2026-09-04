@@ -45,13 +45,6 @@
               />
             </el-select>
           </el-form-item>
-          <el-form-item label="打卡状态">
-            <el-select v-model="queryForm.checkStatus" placeholder="全部" clearable value-type="number" style="width:130px">
-              <el-option label="正常" :value="1" />
-              <el-option label="异常" :value="2" />
-              <el-option label="漏检" :value="0" />
-            </el-select>
-          </el-form-item>
           <el-form-item label="打卡时间">
             <el-date-picker
               v-model="queryForm.timeRange"
