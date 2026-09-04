@@ -1,5 +1,32 @@
 <template>
   <div class="dashboard">
+    <el-card shadow="hover" class="filter-card" style="margin-bottom: 16px">
+      <div class="filter-bar">
+        <div class="filter-left">
+          <span class="filter-label">数据日期</span>
+          <div class="filter-shortcut">
+            <el-button
+              v-for="item in dateShortcuts"
+              :key="item.value"
+              size="small"
+              :type="queryDate === item.value ? 'primary' : ''"
+              @click="queryDate = item.value; handleDateChange()"
+            >
+              {{ item.label }}
+            </el-button>
+          </div>
+        </div>
+        <el-date-picker
+          v-model="queryDate"
+          type="date"
+          placeholder="选择日期"
+          format="YYYY-MM-DD"
+          value-format="YYYY-MM-DD"
+          @change="handleDateChange"
+        />
+      </div>
+    </el-card>
+
     <el-row :gutter="20">
       <el-col :span="6">
         <el-card shadow="hover" class="stat-card stat-card--blue">
@@ -19,7 +46,7 @@
           <div class="stat-card__inner">
             <div class="stat-card__info">
               <div class="stat-card__num">{{ stat.todayCheck }}</div>
-              <div class="stat-card__label">今日打卡次数</div>
+              <div class="stat-card__label">{{ isToday ? '今日打卡次数' : '当日打卡次数' }}</div>
             </div>
             <div class="stat-card__icon">
               <el-icon :size="30"><Finished /></el-icon>
@@ -45,7 +72,7 @@
           <div class="stat-card__inner">
             <div class="stat-card__info">
               <div class="stat-card__num">{{ stat.abnormalCount }}</div>
-              <div class="stat-card__label">今日未打卡点位</div>
+              <div class="stat-card__label">{{ isToday ? '今日未打卡点位' : '当日未打卡点位' }}</div>
             </div>
             <div class="stat-card__icon">
               <el-icon :size="30"><Warning /></el-icon>
@@ -74,10 +101,23 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount, nextTick } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import * as echarts from 'echarts'
 import { Location, Finished, User, Warning } from '@element-plus/icons-vue'
 import { getDashboardStat } from '@/api/dashboard'
+
+const queryDate = ref(new Date().toISOString().slice(0, 10))
+const nowStr = ref(new Date().toISOString().slice(0, 10))
+const isToday = computed(() => queryDate.value === nowStr.value)
+
+const dateShortcuts = computed(() => {
+  const today = new Date().toISOString().slice(0, 10)
+  const yesterday = new Date(Date.now() - 86400 * 1000).toISOString().slice(0, 10)
+  return [
+    { label: '今天', value: today },
+    { label: '昨天', value: yesterday },
+  ]
+})
 
 const stat = ref({
   totalPoint: 0,
@@ -93,10 +133,17 @@ const userBarChartRef = ref(null)
 let chartInstance = null
 let userBarInstance = null
 
+const handleDateChange = () => {
+  loadStat()
+}
+
 const loadStat = async () => {
   try {
-    const res = await getDashboardStat()
+    const res = await getDashboardStat(queryDate.value)
     stat.value = res.data
+    await nextTick()
+    initChart()
+    initUserBarChart()
   } catch (_) {
     stat.value = {
       totalPoint: 0,
@@ -106,20 +153,28 @@ const loadStat = async () => {
       trendData: [],
       userTodayCheckList: []
     }
+    await nextTick()
+    initChart()
+    initUserBarChart()
   }
 }
 
 const initChart = () => {
   if (!chartRef.value) return
+  if (chartInstance) {
+    chartInstance.dispose()
+    chartInstance = null
+  }
   chartInstance = echarts.init(chartRef.value)
 
   const days = []
-  const now = new Date()
+  const endDate = new Date(queryDate.value)
+  const realEnd = Number.isNaN(endDate.getTime()) ? new Date() : endDate
+
   for (let i = 29; i >= 0; i--) {
-    const d = new Date(now.getTime() - i * 24 * 60 * 60 * 1000)
+    const d = new Date(realEnd.getTime() - i * 24 * 60 * 60 * 1000)
     days.push(`${d.getMonth() + 1}-${d.getDate()}`)
   }
-  const mockTrend = []
 
   const option = {
     title: {
@@ -170,7 +225,7 @@ const initChart = () => {
         symbol: 'circle',
         symbolSize: 6,
         showSymbol: false,
-        data: stat.value.trendData || mockTrend,
+        data: stat.value.trendData || [],
         itemStyle: { color: '#409EFF' },
         lineStyle: { width: 3, color: '#409EFF' },
         areaStyle: {
@@ -187,6 +242,10 @@ const initChart = () => {
 
 const initUserBarChart = () => {
   if (!userBarChartRef.value) return
+  if (userBarInstance) {
+    userBarInstance.dispose()
+    userBarInstance = null
+  }
   userBarInstance = echarts.init(userBarChartRef.value)
 
   const list = stat.value.userTodayCheckList ?? []
@@ -196,7 +255,7 @@ const initUserBarChart = () => {
 
   const option = {
     title: {
-      text: '巡检员今日打卡次数',
+      text: '巡检员打卡次数',
       left: 8,
       top: 4,
       textStyle: { fontSize: 16, fontWeight: 600, color: '#303133' }
@@ -255,9 +314,6 @@ const handleResize = () => {
 
 onMounted(async () => {
   await loadStat()
-  await nextTick()
-  initChart()
-  initUserBarChart()
   window.addEventListener('resize', handleResize)
 })
 
@@ -276,6 +332,34 @@ onBeforeUnmount(() => {
 
 <style scoped lang="scss">
 .dashboard {
+  .filter-card {
+    :deep(.el-card__body) {
+      padding: 14px 20px;
+    }
+  }
+  .filter-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .filter-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .filter-label {
+    font-weight: 500;
+    color: #303133;
+    white-space: nowrap;
+  }
+  .filter-shortcut {
+    display: flex;
+    gap: 8px;
+  }
+
   .stat-card {
     border: none;
     border-radius: 10px;
