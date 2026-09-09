@@ -29,6 +29,10 @@
         </div>
         <p class="hero-text">{{ heroText }}</p>
         <p class="hero-tip">{{ heroTip }}</p>
+        <button v-if="heroState === 'error'" class="hero-retry-btn" @click="retryCheckIn">
+          <el-icon :size="16"><Refresh /></el-icon>
+          <span>重新定位并打卡</span>
+        </button>
       </section>
 
       <section class="success-panel" v-if="heroState === 'success'">
@@ -231,6 +235,7 @@ const currentPoint = reactive({
 const lastCheckPoint = ref('')
 const lastCheckTime = ref('')
 const distanceMeter = ref(null)
+const checkErrorMsg = ref('')
 
 let toastTimer = null
 
@@ -258,7 +263,7 @@ const heroTip = computed(() => {
     return '核对信息后点击确认打卡'
   }
   if (heroState.value === 'success') return '本次巡检记录已保存'
-  if (heroState.value === 'error') return '点位识别失败，请重新贴近NFC标签扫码'
+  if (heroState.value === 'error') return checkErrorMsg.value || '打卡失败，请重新定位后重试'
   return '将手机背面贴近巡检点 NFC 标签即可打卡'
 })
 
@@ -296,24 +301,100 @@ const goWorkspace = () => {
   router.replace('/workspace')
 }
 
+let watchId = null
+let locTimer = null
+let locSeq = 0
+
+const stopLocating = () => {
+  if (watchId !== null && navigator.geolocation) {
+    navigator.geolocation.clearWatch(watchId)
+  }
+  watchId = null
+  if (locTimer) {
+    clearTimeout(locTimer)
+    locTimer = null
+  }
+}
+
 const getLocation = () => {
+  stopLocating()
+  const seq = ++locSeq
   location.ready = false
   location.error = ''
+
   if (!navigator.geolocation) {
     location.error = '当前浏览器不支持定位'
     return
   }
-  navigator.geolocation.getCurrentPosition(
+
+  const MAX_FIX_AGE = 30 * 1000
+  const GOOD_ACCURACY = 50
+  const MAX_WAIT = 15 * 1000
+
+  let bestPos = null
+  let bestScore = Infinity
+  let settled = false
+
+  const finish = (pos) => {
+    if (settled || seq !== locSeq) return
+    settled = true
+    stopLocating()
+    location.longitude = pos.coords.longitude.toFixed(6)
+    location.latitude = pos.coords.latitude.toFixed(6)
+    location.ready = true
+  }
+
+  const fail = (msg) => {
+    if (settled || seq !== locSeq) return
+    settled = true
+    stopLocating()
+    location.error = msg
+  }
+
+  watchId = navigator.geolocation.watchPosition(
     (pos) => {
-      location.longitude = pos.coords.longitude.toFixed(6)
-      location.latitude = pos.coords.latitude.toFixed(6)
-      location.ready = true
+      if (seq !== locSeq) return
+      const age = pos.timestamp ? Date.now() - pos.timestamp : 0
+      if (pos.timestamp && age > MAX_FIX_AGE) return
+
+      const accuracy = typeof pos.coords.accuracy === 'number' ? pos.coords.accuracy : 9999
+      const score = accuracy + age / 1000
+      if (!bestPos || score < bestScore) {
+        bestPos = pos
+        bestScore = score
+      }
+      if (accuracy <= GOOD_ACCURACY) {
+        finish(pos)
+      }
     },
     (err) => {
-      location.error = err.code === 1 ? '请开启定位权限' : '定位失败，请重试'
+      if (seq !== locSeq) return
+      if (err.code === 1) {
+        fail('请开启微信定位权限后重试')
+      }
     },
-    { enableHighAccuracy: true, timeout: 10000 }
+    { enableHighAccuracy: true, maximumAge: 0, timeout: 20000 }
   )
+
+  locTimer = setTimeout(() => {
+    if (settled || seq !== locSeq) return
+    if (bestPos) {
+      finish(bestPos)
+    } else {
+      fail('定位超时，请走到室外或靠近点位后点击重试')
+    }
+  }, MAX_WAIT)
+}
+
+const retryCheckIn = () => {
+  if (!realNfcPointId) {
+    showMsg('点位信息已失效，请重新贴近NFC标签')
+    return
+  }
+  checkErrorMsg.value = ''
+  heroState.value = 'loading'
+  autoCheckInTriggered.value = false
+  getLocation()
 }
 
 const resetPoint = () => {
@@ -363,15 +444,18 @@ const handleSubmit = async () => {
       lastCheckPoint.value = data.pointName
       lastCheckTime.value = String(data.checkTime).replace('T', ' ')
       remark.value = ''
+      checkErrorMsg.value = ''
       heroState.value = 'success'
       showMsg('打卡成功')
     } else {
       heroState.value = 'error'
-      showMsg(data.msg)
+      checkErrorMsg.value = data.msg || '打卡失败，请重新定位后重试'
+      showMsg(data.msg || '打卡失败')
     }
   } catch (err) {
     console.error('打卡请求异常', err)
     heroState.value = 'error'
+    checkErrorMsg.value = '网络异常，请检查网络后重新定位打卡'
     showMsg('网络异常，打卡请求失败')
   } finally {
     submitting.value = false
@@ -434,6 +518,7 @@ onMounted(async () => {
 onUnmounted(() => {
   window.removeEventListener('online', handleOnline)
   window.removeEventListener('offline', handleOffline)
+  stopLocating()
   if (toastTimer) clearTimeout(toastTimer)
 })
 </script>
@@ -565,6 +650,32 @@ onUnmounted(() => {
   font-size: 13px;
   color: #667085;
   margin: 0;
+}
+
+.hero-retry-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 16px;
+  padding: 11px 26px;
+  border: none;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(59, 130, 246, 0.35);
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
 }
 
 .success-panel {
