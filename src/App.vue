@@ -37,6 +37,10 @@
           <el-icon><Van /></el-icon>
           <template #title>停车申请</template>
         </el-menu-item>
+        <el-menu-item index="/repair">
+          <el-icon><Tools /></el-icon>
+          <template #title>物业报修</template>
+        </el-menu-item>
         <el-menu-item index="/user">
           <el-icon><User /></el-icon>
           <template #title>账号管理</template>
@@ -100,7 +104,7 @@
 import { ref, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useUserStore } from '@/store/user'
-import { Monitor, Location, Document, User, Promotion, Avatar, SwitchButton, ArrowDown, Lock, Fold, Expand, DataBoard, Van } from '@element-plus/icons-vue'
+import { Monitor, Location, Document, User, Promotion, Avatar, SwitchButton, ArrowDown, Lock, Fold, Expand, DataBoard, Van, Tools } from '@element-plus/icons-vue'
 import { ElMessageBox } from 'element-plus'
 
 const router = useRouter()
@@ -114,6 +118,7 @@ const isFullScreen = computed(() => {
     || route.path.startsWith('/check')
     || route.path.startsWith('/apply')
     || route.path.startsWith('/audit')
+    || route.path.startsWith('/workbench')
     || route.path === '/workspace'
 })
 

@@ -27,6 +27,7 @@
               <el-option label="超级管理员" :value="1" />
               <el-option label="普通管理员" :value="3" />
               <el-option label="巡检员" :value="2" />
+              <el-option label="维修师傅" :value="4" />
             </el-select>
           </el-form-item>
           <el-form-item label="状态">
@@ -90,12 +91,12 @@
               size="small"
               effect="light"
               round
-              :type="row.role === 1 ? 'danger' : row.role === 3 ? 'warning' : 'primary'"
+              :type="row.role === 1 ? 'danger' : row.role === 3 ? 'warning' : row.role === 4 ? 'success' : 'primary'"
             >
               <el-icon :size="12" style="margin-right:2px">
-                <component :is="row.role === 1 ? 'Finished' : row.role === 3 ? 'UserFilled' : 'User'" />
+                <component :is="row.role === 1 ? 'Finished' : row.role === 3 ? 'UserFilled' : row.role === 4 ? 'Tools' : 'User'" />
               </el-icon>
-              {{ row.role === 1 ? '超级管理员' : row.role === 3 ? '普通管理员' : '巡检员' }}
+              {{ row.role === 1 ? '超级管理员' : row.role === 3 ? '普通管理员' : row.role === 4 ? '维修师傅' : '巡检员' }}
             </el-tag>
           </template>
         </el-table-column>
@@ -214,6 +215,7 @@
         <el-form-item label="角色" prop="role">
           <el-radio-group v-model="form.role">
             <el-radio :value="2">巡检员</el-radio>
+            <el-radio :value="4">维修师傅</el-radio>
             <el-radio :value="3">普通管理员</el-radio>
             <el-radio :value="1" :disabled="userStore.userInfo?.role !== 1">超级管理员</el-radio>
           </el-radio-group>

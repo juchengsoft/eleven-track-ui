@@ -13,7 +13,7 @@ const routes = [
     path: '/workspace',
     name: 'Workspace',
     component: () => import('@/views/Workspace/index.vue'),
-    meta: { requiresAuth: true, screen: 'workspace', adminOnly: false }
+    meta: { requiresAuth: true, screen: 'workspace', adminOnly: false, roles: [2] }
   },
   {
     path: '/check/:nfcId?',
@@ -31,7 +31,25 @@ const routes = [
     path: '/audit/parking',
     name: 'ParkingAudit',
     component: () => import('@/views/ParkingAudit/index.vue'),
-    meta: { requiresAuth: true, screen: 'public', adminOnly: false }
+    meta: { requiresAuth: true, screen: 'public', adminOnly: false, roles: [1, 3] }
+  },
+  {
+    path: '/apply/repair',
+    name: 'RepairApply',
+    component: () => import('@/views/RepairApply/index.vue'),
+    meta: { requiresAuth: false, screen: 'public', adminOnly: false }
+  },
+  {
+    path: '/audit/repair',
+    name: 'RepairAudit',
+    component: () => import('@/views/RepairAudit/index.vue'),
+    meta: { requiresAuth: true, screen: 'public', adminOnly: false, roles: [1, 3] }
+  },
+  {
+    path: '/workbench/repair',
+    name: 'RepairWorker',
+    component: () => import('@/views/RepairWorker/index.vue'),
+    meta: { requiresAuth: true, screen: 'public', adminOnly: false, roles: [4] }
   },
   {
     path: '/',
@@ -66,6 +84,12 @@ const routes = [
         path: 'parking',
         name: 'ParkingApply',
         component: () => import('@/views/ParkingApply/index.vue'),
+        meta: { requiresAuth: true, screen: 'admin', adminOnly: true }
+      },
+      {
+        path: 'repair',
+        name: 'Repair',
+        component: () => import('@/views/Repair/index.vue'),
         meta: { requiresAuth: true, screen: 'admin', adminOnly: true }
       },
       {
@@ -111,26 +135,41 @@ router.beforeEach((to, from, next) => {
       }
     }
     const userStore = useUserStore()
-    const role = userStore.userInfo?.role
-    return next(role === 2 ? '/workspace' : '/dashboard')
+    const role = getRole(userStore)
+    return next(getHomePath(role))
   }
 
   if (token) {
     const userStore = useUserStore()
-    const role = userStore.userInfo?.role
-    const isInspector = role !== undefined && role == 2
+    const role = getRole(userStore)
     const inAdminLayout = to.matched.some(r => r.meta.screen === 'admin')
 
-    if (isInspector && inAdminLayout) {
-      return next('/workspace')
+    if (inAdminLayout && (role === 2 || role === 4)) {
+      return next(getHomePath(role))
+    }
+
+    if (Array.isArray(to.meta.roles) && !to.meta.roles.includes(role)) {
+      return next(getHomePath(role))
     }
 
     if (to.path === '/' || to.path === '') {
-      return next(isInspector ? '/workspace' : '/dashboard')
+      return next(getHomePath(role))
     }
   }
 
   next()
 })
+
+function getRole (userStore) {
+  const r = userStore.userInfo?.role
+  const n = Number(r)
+  return Number.isNaN(n) ? r : n
+}
+
+function getHomePath (role) {
+  if (role === 2) return '/workspace'
+  if (role === 4) return '/workbench/repair'
+  return '/dashboard'
+}
 
 export default router
