@@ -252,6 +252,7 @@ import {
   getPointSelect,
   getUserSelect
 } from '@/api/record'
+import { downloadBlob } from '@/utils/download'
 
 const loading = ref(false)
 const exportLoading = ref(false)
@@ -363,15 +364,7 @@ const handleExport = async () => {
       params.endTime = queryForm.value.timeRange[1] + ' 23:59:59'
     }
     const res = await exportRecord(params)
-    const blob = new Blob([res.data])
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    link.setAttribute('download', `巡检记录_${Date.now()}.xlsx`)
-    document.body.appendChild(link)
-    link.click()
-    link.remove()
-    URL.revokeObjectURL(url)
+    downloadBlob(res.data, '巡检记录')
     ElMessage.success('导出成功')
   } catch (_) {
     ElMessage.error('导出失败')

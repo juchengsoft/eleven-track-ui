@@ -42,6 +42,16 @@
           <div class="card-top">
             <span class="contact">{{ row.contactName }}</span>
             <span class="flex-sp"></span>
+            <el-tag
+              v-if="row.delayCount > 0"
+              size="small"
+              type="warning"
+              effect="plain"
+              round
+              :title="row.lastDelayReason"
+            >
+              已延期{{ row.delayCount }}次
+            </el-tag>
             <el-tag size="small" effect="light" round :type="getRepairStatusTagType(row.orderStatus)">
               {{ getRepairStatusText(row.orderStatus) }}
             </el-tag>
@@ -90,7 +100,11 @@
               <span>详情</span>
             </button>
           </div>
-          <div class="card-actions" v-else-if="activeTab === 5">
+          <div class="card-actions card-actions--triple" v-else-if="activeTab === 5">
+            <button class="btn-detail" @click="openDetail(row)">
+              <el-icon :size="14"><Document /></el-icon>
+              <span>详情</span>
+            </button>
             <button class="btn-reject" @click="openAccept(row, 7)">
               <el-icon :size="14"><CircleClose /></el-icon>
               <span>驳回返工</span>
@@ -280,6 +294,7 @@ const userStore = useUserStore()
 
 const tabs = [
   { label: '待派单', value: 3 },
+  { label: '维修中', value: 4 },
   { label: '待验收', value: 5 },
   { label: '已完成', value: 6 }
 ]
@@ -299,6 +314,7 @@ let toastTimer = null
 
 const emptyText = computed(() => {
   if (activeTab.value === 3) return '暂无待派单报修'
+  if (activeTab.value === 4) return '暂无维修中报修'
   if (activeTab.value === 5) return '暂无待验收报修'
   return '暂无已完成报修'
 })
@@ -663,6 +679,19 @@ onMounted(() => {
   margin-top: 12px;
   padding-top: 12px;
   border-top: 1px solid #f2f3f5;
+}
+
+.card-actions--triple {
+  gap: 8px;
+
+  .btn-pass,
+  .btn-reject,
+  .btn-detail {
+    height: 38px;
+    font-size: 13px;
+    gap: 4px;
+    padding: 0 4px;
+  }
 }
 
 .btn-pass,

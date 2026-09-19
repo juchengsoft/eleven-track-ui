@@ -228,6 +228,7 @@ import {
   getPointStatDetail,
   exportPointStat
 } from '@/api/pointStat'
+import { downloadBlob } from '@/utils/download'
 import { getPointSelect } from '@/api/record'
 
 const loading = ref(false)
@@ -365,15 +366,7 @@ const handleExport = async () => {
     delete params.current
     delete params.size
     const res = await exportPointStat(params)
-    const blob = new Blob([res.data])
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    link.setAttribute('download', `点位打卡统计_${Date.now()}.xlsx`)
-    document.body.appendChild(link)
-    link.click()
-    link.remove()
-    URL.revokeObjectURL(url)
+    downloadBlob(res.data, '点位打卡统计')
     ElMessage.success('导出成功')
   } catch (_) {
     ElMessage.error('导出失败')

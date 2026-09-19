@@ -53,6 +53,7 @@
       <div class="table-card__header">
         <div class="table-card__header-left">
           <el-button type="primary" :icon="Link" @click="copyApplyLink">复制录入链接</el-button>
+          <el-button type="success" :icon="Download" :loading="exportLoading" @click="handleExport">导出Excel</el-button>
         </div>
         <el-tooltip content="刷新" placement="top">
           <el-button :icon="Refresh" circle @click="getList" />
@@ -226,9 +227,11 @@ import {
   Clock,
   Delete,
   DataAnalysis,
-  Check
+  Check,
+  Download
 } from '@element-plus/icons-vue'
-import { getParkingApplyList, deleteParkingApply, auditParkingApply } from '@/api/parkingApply'
+import { getParkingApplyList, deleteParkingApply, auditParkingApply, exportParkingApply } from '@/api/parkingApply'
+import { downloadBlob } from '@/utils/download'
 
 const loading = ref(false)
 const tableData = ref([])
@@ -332,6 +335,28 @@ const copyApplyLink = async () => {
     ElMessage.success('录入链接已复制，可分享给访客填写')
   } catch (_) {
     ElMessage.warning('复制失败，请手动复制：' + url)
+  }
+}
+
+const exportLoading = ref(false)
+
+const handleExport = async () => {
+  if (exportLoading.value) return
+  exportLoading.value = true
+  try {
+    const params = {
+      keyword: queryForm.value.keyword || undefined,
+      applyStatus: queryForm.value.applyStatus,
+      beginTime: queryForm.value.dateRange?.[0] || undefined,
+      endTime: queryForm.value.dateRange?.[1] || undefined
+    }
+    const res = await exportParkingApply(params)
+    downloadBlob(res.data, '停车申请')
+    ElMessage.success('导出成功')
+  } catch (_) {
+    ElMessage.error('导出失败')
+  } finally {
+    exportLoading.value = false
   }
 }
 

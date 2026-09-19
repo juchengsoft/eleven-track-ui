@@ -54,6 +54,10 @@ export function deleteRepairOrder(id) {
   return request.delete(`/api/repair/delete/${id}`)
 }
 
+export function exportRepairList(params) {
+  return request.get('/api/repair/export', { params, responseType: 'blob' })
+}
+
 export function getRepairAuditList(params) {
   return request({
     url: '/api/repair/auditList',

@@ -12,6 +12,10 @@ export function deleteParkingApply(id) {
   return request.delete(`/api/parkingApply/delete/${id}`)
 }
 
+export function exportParkingApply(params) {
+  return request.get('/api/parkingApply/export', { params, responseType: 'blob' })
+}
+
 export function submitParkingApply(data) {
   return request({
     url: '/api/parkingApply/submit',
