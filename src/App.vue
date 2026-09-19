@@ -120,6 +120,7 @@ const isFullScreen = computed(() => {
     || route.path.startsWith('/audit')
     || route.path.startsWith('/workbench')
     || route.path === '/workspace'
+    || route.path === '/mobile'
 })
 
 const toggleCollapse = () => {

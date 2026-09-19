@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { getToken } from '@/utils/auth'
 import { useUserStore } from '@/store/user'
+import { isMobile } from '@/utils/device'
 
 const routes = [
   {
@@ -49,7 +50,14 @@ const routes = [
     path: '/workbench/repair',
     name: 'RepairWorker',
     component: () => import('@/views/RepairWorker/index.vue'),
+    // 仅维修师傅（4）可处理工单
     meta: { requiresAuth: true, screen: 'public', adminOnly: false, roles: [4] }
+  },
+  {
+    path: '/mobile',
+    name: 'MobileNotice',
+    component: () => import('@/views/MobileNotice/index.vue'),
+    meta: { requiresAuth: true, screen: 'public', adminOnly: false }
   },
   {
     path: '/',
@@ -148,6 +156,10 @@ router.beforeEach((to, from, next) => {
       return next(getHomePath(role))
     }
 
+    if (inAdminLayout && isMobile() && !sessionStorage.getItem('forceDesktop')) {
+      return next('/mobile')
+    }
+
     if (Array.isArray(to.meta.roles) && !to.meta.roles.includes(role)) {
       return next(getHomePath(role))
     }
@@ -169,7 +181,7 @@ function getRole (userStore) {
 function getHomePath (role) {
   if (role === 2) return '/workspace'
   if (role === 4) return '/workbench/repair'
-  return '/dashboard'
+  return isMobile() ? '/mobile' : '/dashboard'
 }
 
 export default router

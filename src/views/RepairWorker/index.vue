@@ -76,7 +76,11 @@
             <span class="ctime">{{ formatRepairTime(row.updateTime || row.createTime) }}</span>
           </div>
 
-          <div class="card-actions" v-if="activeTab === 4">
+          <div class="card-actions card-actions--triple" v-if="activeTab === 4">
+            <button class="btn-detail" @click="openDetail(row)">
+              <el-icon :size="14"><Document /></el-icon>
+              <span>详情</span>
+            </button>
             <button class="btn-delay" @click="openDelay(row)">
               <el-icon :size="14"><Clock /></el-icon>
               <span>延期说明</span>
@@ -533,6 +537,9 @@ onMounted(() => {
 }
 
 .card-actions { display: flex; gap: 10px; margin-top: 12px; padding-top: 12px; border-top: 1px solid #f2f3f5; }
+.card-actions--triple { gap: 8px;
+  .btn-pass, .btn-delay, .btn-detail { height: 38px; font-size: 13px; gap: 4px; padding: 0 4px; }
+}
 .btn-pass, .btn-delay, .btn-detail { flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; height: 40px; border: none; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
 .btn-pass { background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); color: #fff; &:hover { box-shadow: 0 4px 14px rgba(34, 197, 94, 0.35); } }
 .btn-delay { background: #fff7ed; color: #ea580c; border: 1px solid #fed7aa; &:hover { background: #ffedd5; } }
